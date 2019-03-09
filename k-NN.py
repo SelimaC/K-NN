@@ -3,7 +3,7 @@ from numpy import genfromtxt
 import sys
 from collections import Counter
 from numba import jit
-
+import operator
 
 #For Google Colab
 #from google.colab import files
@@ -48,51 +48,42 @@ def distance(x, y, p):
     return dist
 
 
-def knn(test_data, train_data, labels, k, p):
+def knn(test_data, train_data, labels, tl, k, p):
     pred = []
     for i in range(0, np.asarray(test_data).shape[0]):
+        kk = []
+        #kindex = np.zeros((k,2))
+        klabel = []
 
-        kindex = np.zeros((k, 3))
-        klabel = np.zeros(k)
-        knearest = np.zeros(k)
-        index = 0
-        # knearest = np.asarray(knearest)
+        #knearest = np.asarray(knearest)
         for j in range(0, np.asarray(train_data).shape[0]):
             # print("working")
-            if index < k:
 
-                knearest[index] = distance(test_data[i], train_data[j], p)
-                klabel[index] = labels[j]
-                kindex[index][2] = labels[j]
-                kindex[index][1] = distance(test_data[i], train_data[j], p)
-                # print(knearest[index])
-                index = index + 1
+            kk.append((labels[j], distance(test_data[i], train_data[j], p)))
+        kk.sort(key=operator.itemgetter(1))
+        for j in range(0, k):
+            klabel.append(kk[j][0])
+        neigh = {}
+        for m in range(0, len(klabel)):
+            neigh[klabel[m]] = klabel.count(klabel[m])
 
-            elif np.max(knearest) > distance(test_data[i], train_data[j], p):
-
-                knearest[np.argmax(knearest)] = distance(test_data[i], train_data[j], p)
-                klabel[np.argmax(knearest)] = labels[j]
-                kindex[np.argmax(knearest)][2] = labels[j]
-                kindex[np.argmax(knearest)][1] = distance(test_data[i], train_data[j], p)
-
-                # print(knearest[np.argmax(knearest)])
-
+        sortedk = sorted(neigh.items(), key=operator.itemgetter(1), reverse=True)
+        # kindex = np.sort(kindex, axis=0)
         ans = Counter(klabel)
         if ans.most_common(1)[0][1] == k:
-            pred.append(ans.most_common(1)[0][0])
+          pred.append(sortedk[0][0])
         else:
-            weight = dict()
-            for d in range(0, len(klabel)):
-                if klabel[d] in weight.keys():
-                    weight[klabel[d]] = weight[klabel[d]] + knearest[d]
-                else:
-                    weight[klabel[d]] = knearest[d]
-            for key in weight:
+          weight = {}
+          for h in range(0, k):
+            if kk[h][0] in weight.keys():
+              weight[kk[h][0]] = weight[kk[h][0]] + kk[h][1]
+            else:
+              weight[kk[h][0]] = kk[h][1]
+          for key in weight:
                 weight[key] = float(weight[key] / pow(list(klabel).count(key), 2))
-            pred.append(min(weight, key=weight.get))
+          pred.append(min(weight, key=weight.get))
 
-
-
+        print(str(pred[i]) + "    " + str(tl[i]))
     return pred
 
 
@@ -176,14 +167,12 @@ def accuracy(pred, label):
     return float(sum(macro)/10)
 
 
-
-
 def main():
 
     kk = leaveoneoutcv(traindata, trainlabel, 2)
     print("Best k is: "+str(kk))
     '''
-    prediction = knn(testdata, traindata, 3, 2)
+    prediction = knn(testdata, traindata, trainlabel, 3, 2)
     acc = accuracy(prediction, testlabel)
     l = loss(prediction, testlabel)
     print("For k = " + str(3) + " , loss = " + str(l) + " and accuracy = " + str(acc))
