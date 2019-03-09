@@ -74,15 +74,25 @@ def knn(test_data, train_data, labels, k, p):
                 klabel[np.argmax(knearest)] = labels[j]
                 kindex[np.argmax(knearest)][2] = labels[j]
                 kindex[np.argmax(knearest)][1] = distance(test_data[i], train_data[j], p)
-                # print(knearest[np.argmax(knearest)])
-        for j in range(0, k):
-            kindex[j][0] = k - list(klabel).count(klabel[j]) #because we want to sort count in decresing order
-        kindex = np.sort(kindex, axis=0)
-        pred.append(kindex[0][2])
-        print("KINDEX")
-        #print(kindex)
 
-        #print(str(pred[i]) + "    " + str(tl[i]))
+                # print(knearest[np.argmax(knearest)])
+
+        ans = Counter(klabel)
+        if ans.most_common(1)[0][1] == k:
+            pred.append(ans.most_common(1)[0][0])
+        else:
+            weight = dict()
+            for d in range(0, len(klabel)):
+                if klabel[d] in weight.keys():
+                    weight[klabel[d]] = weight[klabel[d]] + knearest[d]
+                else:
+                    weight[klabel[d]] = knearest[d]
+            for key in weight:
+                weight[key] = float(weight[key] / pow(list(klabel).count(key), 2))
+            pred.append(min(weight, key=weight.get))
+
+
+
     return pred
 
 
