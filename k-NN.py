@@ -2,8 +2,10 @@ import numpy as np
 from numpy import genfromtxt
 import sys
 from collections import Counter
-from numba import jit
+#from numba import jit
 import operator
+from sklearn.preprocessing import MinMaxScaler
+
 
 #For Google Colab
 #from google.colab import files
@@ -35,8 +37,15 @@ for i in range(0, testdata.shape[0]):
 testlabel = np.asarray(testlabel)
 testdata = np.delete(testdata, 0, 1)
 
+scaler1 = MinMaxScaler(feature_range=(0, 1))
+scaler1 = scaler1.fit(traindata)
+traindata = scaler1.transform(traindata)
 
-@jit(nopython=True)
+scaler2 = MinMaxScaler(feature_range=(0, 1))
+scaler2 = scaler2.fit(testdata)
+testdata = scaler2.transform(testdata)
+
+#@jit(nopython=True)
 def distance(x, y, p):
     total = np.zeros(1)
     if len(x) != len(y):
@@ -52,10 +61,12 @@ def knn(test_data, train_data, labels, tl, k, p):
     pred = []
     for i in range(0, np.asarray(test_data).shape[0]):
         kk = []
-        #kindex = np.zeros((k,2))
+        kkk = []
+        # kindex = np.zeros((k,2))
         klabel = []
-
-        #knearest = np.asarray(knearest)
+        # knearest = np.zeros(k)
+        index = 0
+        # knearest = np.asarray(knearest)
         for j in range(0, np.asarray(train_data).shape[0]):
             # print("working")
 
@@ -63,29 +74,32 @@ def knn(test_data, train_data, labels, tl, k, p):
         kk.sort(key=operator.itemgetter(1))
         for j in range(0, k):
             klabel.append(kk[j][0])
+            for d in range(0, 2):
+                kkk.append(kk[j][d])
         neigh = {}
         for m in range(0, len(klabel)):
             neigh[klabel[m]] = klabel.count(klabel[m])
 
         sortedk = sorted(neigh.items(), key=operator.itemgetter(1), reverse=True)
         # kindex = np.sort(kindex, axis=0)
+        print("Kindex")
+        print(sortedk)
         ans = Counter(klabel)
         if ans.most_common(1)[0][1] == k:
-          pred.append(sortedk[0][0])
+            pred.append(sortedk[0][0])
         else:
-          weight = {}
-          for h in range(0, k):
-            if kk[h][0] in weight.keys():
-              weight[kk[h][0]] = weight[kk[h][0]] + kk[h][1]
-            else:
-              weight[kk[h][0]] = kk[h][1]
-          for key in weight:
+            weight = {}
+            for h in range(0, k):
+                if kk[h][0] in weight.keys():
+                    weight[kk[h][0]] = weight[kk[h][0]] + kk[h][1]
+                else:
+                    weight[kk[h][0]] = kk[h][1]
+            for key in weight:
                 weight[key] = float(weight[key] / pow(list(klabel).count(key), 2))
-          pred.append(min(weight, key=weight.get))
+            pred.append(min(weight, key=weight.get))
 
         print(str(pred[i]) + "    " + str(tl[i]))
     return pred
-
 
 def breaktie(kindex, k):
     mostk = []
@@ -168,10 +182,14 @@ def accuracy(pred, label):
 
 
 def main():
-
+    prediction = knn(traindata, traindata, trainlabel, trainlabel, 3, 2)
+    acc = accuracy(prediction, trainlabel)
+    l = loss(prediction, trainlabel)
+    print("For k = " + str(3) + " , loss = " + str(l) + " and accuracy = " + str(acc))
+    '''
     kk = leaveoneoutcv(traindata, trainlabel, 2)
     print("Best k is: "+str(kk))
-    '''
+    
     prediction = knn(testdata, traindata, trainlabel, 3, 2)
     acc = accuracy(prediction, testlabel)
     l = loss(prediction, testlabel)
