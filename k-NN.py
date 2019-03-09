@@ -52,30 +52,37 @@ def knn(test_data, train_data, labels, k, p):
     pred = []
     for i in range(0, np.asarray(test_data).shape[0]):
 
+        kindex = np.zeros((k, 3))
+        klabel = np.zeros(k)
         knearest = np.zeros(k)
-        kindex = np.zeros(k)
         index = 0
-        knearest = np.asarray(knearest)
+        # knearest = np.asarray(knearest)
         for j in range(0, np.asarray(train_data).shape[0]):
-            #print("working")
+            # print("working")
             if index < k:
 
                 knearest[index] = distance(test_data[i], train_data[j], p)
-                kindex[index] = labels[j]
-                print(knearest[index])
+                klabel[index] = labels[j]
+                kindex[index][2] = labels[j]
+                kindex[index][1] = distance(test_data[i], train_data[j], p)
+                # print(knearest[index])
                 index = index + 1
 
             elif np.max(knearest) > distance(test_data[i], train_data[j], p):
 
                 knearest[np.argmax(knearest)] = distance(test_data[i], train_data[j], p)
-                kindex[np.argmax(knearest)] = labels[j]
-                print(knearest[np.argmax(knearest)])
+                klabel[np.argmax(knearest)] = labels[j]
+                kindex[np.argmax(knearest)][2] = labels[j]
+                kindex[np.argmax(knearest)][1] = distance(test_data[i], train_data[j], p)
+                # print(knearest[np.argmax(knearest)])
+        for j in range(0, k):
+            kindex[j][0] = k - list(klabel).count(klabel[j]) #because we want to sort count in decresing order
+        kindex = np.sort(kindex, axis=0)
+        pred.append(kindex[0][2])
+        print("KINDEX")
+        #print(kindex)
 
-        ans = Counter(kindex)
-        if ans.most_common(1)[0][1] == 1:
-            pred.append(breaktie(kindex, k))
-        else:
-            pred.append(ans.most_common(1)[0][0])
+        #print(str(pred[i]) + "    " + str(tl[i]))
     return pred
 
 
@@ -166,7 +173,7 @@ def main():
     kk = leaveoneoutcv(traindata, trainlabel, 2)
     print("Best k is: "+str(kk))
     '''
-    prediction = knn(testdata, traindata, trainlabel, 3, 2)
+    prediction = knn(testdata, traindata, 3, 2)
     acc = accuracy(prediction, testlabel)
     l = loss(prediction, testlabel)
     print("For k = " + str(3) + " , loss = " + str(l) + " and accuracy = " + str(acc))
