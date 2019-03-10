@@ -54,11 +54,6 @@ print(pca.explained_variance_ratio_)
 print(traindata.shape)
 print(pca_result.shape)
 
-plt.scatter(pca_result[:4000, 0], pca_result[:4000, 1], c=trainlabel[:4000], edgecolor='none', alpha=0.5,
-           cmap=plt.get_cmap('jet', 10), s=5)
-plt.colorbar()
-plt.show()
-
 pca = PCA(200)
 pca_full = pca.fit(traindata)
 
