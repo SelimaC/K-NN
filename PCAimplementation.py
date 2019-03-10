@@ -22,12 +22,12 @@ from sklearn.decomposition import PCA
       print('User uploaded file "{name}" with length {length} bytes'.format(name=fn, length=len(test[fn])))
 '''
 
-train = genfromtxt('MNIST_train_small.csv', delimiter=',')
+train = genfromtxt('MNIST_train.csv', delimiter=',')
 test = genfromtxt('MNIST_test_small.csv', delimiter=',')
 global trainlabel
 trainlabel = []
 testlabel = []
-traindata = train.reshape((3000, 785))
+traindata = train.reshape((60000, 785))
 for i in range(0, traindata.shape[0]):
     trainlabel.append(traindata[i][0])
 trainlabel = np.asarray(trainlabel)
