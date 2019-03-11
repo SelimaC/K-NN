@@ -132,6 +132,31 @@ def leaveoneoutcv(data, label, p):
     return np.argmin(kloss)+1
 
 
+def leaveoneoutcvpp(data, label):
+    kloss = np.zeros((20, 15))
+
+    for k in range(1, 6):
+        for p in range(1, 16):
+
+            l = []
+            for m in range(0, data.shape[0]):
+                testcv = data[m]
+                testl = label[m]
+                testcv = np.asarray(testcv).reshape((1, 784))
+                traincv = np.concatenate((data[0: m], data[m + 1:]), axis=0)
+                # print(traincv.shape)
+                train_label = np.concatenate((label[0: m], label[m + 1:]), axis=0)
+                # print(trainlabel.shape)
+                # print(testcv.shape[0])
+                pred = knn(testcv, traincv, train_label, k, p)
+                l.append(loss(pred, testl))
+            kloss[k - 1][p - 1] = float(sum(l) / len(l))
+            print("For k= " + str(k) + " and p = " + str(p) + ", average loss = " + str(kloss[k - 1][p - 1]))
+    index = np.argmin(kloss)
+    row = (index / 15) + 1
+    column = (index % 15) + 1
+    return row, column
+
 def accuracy(pred, label):
     '''
             correct = 0
