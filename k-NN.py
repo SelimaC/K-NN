@@ -1,121 +1,124 @@
 import math
 import operator
-import matplotlib.pyplot as plt
-import numpy
 
-k = 3
-loss_train = []
-loss_test = []
-p = 2
+class KnnBase(object):
+    def __init__(self, k, weights=None):
+        self.k = k
+        self.weights = weights
 
-
-import csv
-
-with open('MNIST_test_small.csv', 'r') as csvfile:
-    lines = csv.reader(csvfile)
-    test = list(lines)
-
-for x in range(len(test)):
-    for y in range(785):
-        test[x][y] = float(test[x][y])
-
-import csv
-
-with open('MNIST_train_small.csv', 'r') as csvitem:
-    line = csv.reader(csvitem)
-    train = list(line)
-
-for x in range(len(train)):
-    for y in range(785):
-        train[x][y] = float(train[x][y])
-
-
-def pdistance(x1, x2, p):
-    distance = 0
-    if len(x1) != len(x2):
-        print('PDISTANCE ERROR: Vector dimensions must agree')
-    else:
-        for i in range(len(x1) - 1):
-            distance += (abs(x1[i + 1] - x2[i + 1])) ** p
-    return pow(distance, float(1 / p))
-
-
-def pkneighbors(trainset, instance, k, p):
-    # print("Find neighbors..." + str(k))
-    distances = []
-    heap = []
-    n=[]
-    for i in range(len(trainset) - 1):
-        dist = pdistance(instance, trainset[i + 1], p)
-
-        if len(heap) < k:
-            heap.append(dist)
-            n.append(trainset[i + 1])
-        elif dist < max(heap):
-            heap[heap.index(max(heap))]=dist
-            n[heap.index(max(heap))]=trainset[i + 1]
-
-        distances.append((trainset[i + 1], dist))
-
-    #distances.sort(key=operator.itemgetter(1))
-    heap.sort()
-    neighbors = []
-    #print(len(heap))
-    for j in range(k):
-        neighbors.append(distances[j][0])
-
-
-    #print("Neighbors found")
-    return n
-
-
-def response(neighbors):
-    #print("Classify...")
-    classvote = {}
-    for i in range(len(neighbors)):
-        resp = neighbors[i][0]
-        if resp in classvote:
-            classvote[resp] += 1
+    def euclidean_distance(self, data_point1, data_point2):
+        if len(data_point1) != len(data_point2) :
+            raise ValueError('feature length not matching')
         else:
-            classvote[resp] = 1
-    sortedvotes = sorted(classvote.items(), key=operator.itemgetter(1), reverse=True)
-    #print("Classification done "+ str(sortedvotes[0][0]))
-    return sortedvotes[0][0]
+            distance = 0
+            for x in range(len(data_point1)):
+                distance += pow((data_point1[x] - data_point2[x]), 2)
+            return math.sqrt(distance)
+    def fit(self, train_feature, train_label):
+        self.train_feature = train_feature
+        self.train_label = train_label
+
+    def get_neighbors(self,train_set, test_set, k):
+        ''' return k closet neighbour of test_set in training set'''
+        # calculate euclidean distance
+        euc_distance = np.sqrt(np.sum((train_set - test_set)**2 , axis=1))
+        # return the index of nearest neighbour
+        return np.argsort(euc_distance)[0:k]
 
 
-def accuracy(test, pred):
-    correct = 0
-    for i in range(len(test)):
-        if test[i][0] == pred[i]:
-            correct += 1
-    print(correct)
-    return (correct / float(len(test))) * 100.0
+class KnnClassifier(KnnBase):
+    def predict(self, test_feature_data_point):
+        # get the index of all nearest neighbouring data points
+        nearest_data_point_index = self.get_neighbors(self.train_feature, test_feature_data_point, self.k)
+        vote_counter = {}
+        # to count votes for each class initialise all class with zero votes
+        # print('Nearest Data point index ', nearest_data_point_index)
+        for label in set(self.train_label):
+            vote_counter[label] = 0
+        # add count to class that are present in the nearest neighbors data points
+        for class_index in nearest_data_point_index:
+            closest_lable = self.train_label[class_index]
+            vote_counter[closest_lable] += 1
+        # print('Nearest data point count', vote_counter)
+        # return the class that has most votes
+        return max(vote_counter.items(), key=operator.itemgetter(1))[0]
 
 
-def main(trainingData, testData, k, p, type):
-    # generate predictions
-    predictions = []
-    loss = 0;
-    for i in range(len(testData)):
-        neighbors = pkneighbors(trainingData, testData[i], k, p)
-        result = response(neighbors)
-        predictions.append(result)
-        if testData[i][0] != result:
-            loss += 1
-            # print('> predicted=' + repr(result) + ', actual=' + repr(testData[i][0]))
-    acc = accuracy(testData, predictions)
-    print('Accuracy: ' + repr(acc) + '%')
-    print('Loss: ' + str(loss) + '%')
-    if (type == "test"):
-        loss_test.append(loss/len(testData))
-    else:
-        loss_train.append(loss/len(testData))
+
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn import datasets
+import numpy as np
+from numpy import genfromtxt
+import sys
+from collections import Counter
+from numba import jit
+import operator
+from sklearn.preprocessing import MinMaxScaler
+import pandas as pd # data processing, CSV file I/O (e.g. pd.read_csv)
+import seaborn as sns
+import matplotlib.pyplot as plt
+from sklearn.decomposition import PCA
+
+from sklearn.preprocessing import MinMaxScaler
 
 
-for i in range(1, 21):
-    print('Test data ' + str(i)+' \n' )
-    main(train, test, i, p, "test")
-    print('\nTraining data: ' + str(i))
-    main(train, train, i, p, "train")
-    print("--------------------------------------------------------------------------------------------")
+def get_loss(y, y_pred):
+    cnt = (y != y_pred).sum()
+    return round(cnt/len(y), 2)
 
+
+train = genfromtxt('MNIST_train.csv', delimiter=',')
+test = genfromtxt('MNIST_test.csv', delimiter=',')
+knn_acc = []
+
+global trainlabel
+trainlabel = []
+testlabel = []
+traindata = train.reshape((60000, 785))
+for i in range(0, traindata.shape[0]):
+    trainlabel.append(traindata[i][0])
+trainlabel = np.asarray(trainlabel)
+traindata = np.delete(traindata, 0, 1)
+
+testdata = test.reshape((10000, 785))
+for i in range(0, testdata.shape[0]):
+    testlabel.append(testdata[i][0])
+testlabel = np.asarray(testlabel)
+testdata = np.delete(testdata, 0, 1)
+
+scaler1 = MinMaxScaler(feature_range=(0, 1))
+scaler1 = scaler1.fit(traindata)
+traindata = scaler1.transform(traindata)
+
+scaler2 = MinMaxScaler(feature_range=(0, 1))
+scaler2 = scaler2.fit(testdata)
+testdata = scaler2.transform(testdata)
+
+
+
+
+X = testdata
+y = testlabel
+
+
+for k in range(1, 21):
+    print(k)
+    clf = KnnClassifier(k)
+    clf.fit(traindata, trainlabel)
+    pred = []
+    l=1
+    for x in X:
+        print(l)
+        x_pred = clf.predict(x)
+        pred.append(pred)
+        l+=1
+    target_pred = np.array(pred)
+    knn_acc.append(get_loss(target_pred, testlabel))
+    print(get_loss(target_pred, testlabel))
+
+plt.plot(range(1,21), knn_acc)
+plt.xlabel('Number of neighbours')
+plt.ylabel('Empirical loss')
+plt.grid()
+plt.show()
